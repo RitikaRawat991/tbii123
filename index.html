@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea Navigation - Ocean Routes Only</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a2a38, #1d4e6f, #0a2a38);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #4ecdc4;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            color: #4ecdc4;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .map-container {
+            grid-column: 1;
+            height: 500px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 2px solid #4ecdc4;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .control-panel {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #ff7e5f;
+        }
+        
+        .panel-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+            text-align: center;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #ff7e5f;
+        }
+        
+        input, select, button {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        button {
+            background: #ff7e5f;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #ff5a3a;
+        }
+        
+        .hazard-alerts {
+            grid-column: 1 / -1;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #ff7e5f;
+        }
+        
+        .alert-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #ff7e5f;
+            text-align: center;
+        }
+        
+        .alert-item {
+            background: rgba(255, 126, 95, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #ff7e5f;
+        }
+        
+        .alert-icon {
+            font-size: 1.5rem;
+        }
+        
+        .status-panel {
+            grid-column: 2;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #4ecdc4;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .status-value {
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        
+        .instructions {
+            grid-column: 1 / -1;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #4ecdc4;
+        }
+        
+        .instructions h2 {
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .map-container, .control-panel, .status-panel {
+                grid-column: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sea Navigation System</h1>
+            <p class="subtitle">Ocean-only routing with real-time hazard detection</p>
+        </header>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <div class="control-panel">
+            <h2 class="panel-title">Navigation Controls</h2>
+            
+            <div class="input-group">
+                <label for="start-point">Start Point (Lat, Lon):</label>
+                <input type="text" id="start-point" value="19.0760, 72.8777">
+            </div>
+            
+            <div class="input-group">
+                <label for="end-point">Destination (Lat, Lon):</label>
+                <input type="text" id="end-point" value="22.5726, 88.3639">
+            </div>
+            
+            <div class="input-group">
+                <label for="boat-type">Ship Type:</label>
+                <select id="boat-type">
+                    <option value="cargo">Cargo Ship</option>
+                    <option value="cruise">Cruise Ship</option>
+                    <option value="yacht">Yacht</option>
+                    <option value="fishing">Fishing Vessel</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="hazard-sensitivity">Hazard Sensitivity:</label>
+                <select id="hazard-sensitivity">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high" selected>High</option>
+                </select>
+            </div>
+            
+            <button id="calculate-route">Calculate Sea Route</button>
+            <button id="simulate-hazards">Simulate Hazards</button>
+            <button id="start-simulation">Start Ship Simulation</button>
+            <button id="reset-map">Reset Map</button>
+        </div>
+        
+        <div class="status-panel">
+            <h2 class="panel-title">Navigation Status</h2>
+            
+            <div class="status-item">
+                <span>Current Position:</span>
+                <span class="status-value" id="current-pos">19.0760, 72.8777</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Destination:</span>
+                <span class="status-value" id="destination-pos">22.5726, 88.3639</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Distance to Destination:</span>
+                <span class="status-value" id="distance">-</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Estimated Time:</span>
+                <span class="status-value" id="eta">-</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Current Speed:</span>
+                <span class="status-value" id="speed">0 knots</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Hazards Detected:</span>
+                <span class="status-value" id="hazards-count">0</span>
+            </div>
+            
+            <div class="status-item">
+                <span>Route Status:</span>
+                <span class="status-value" id="route-status">Not Calculated</span>
+            </div>
+        </div>
+        
+        <div class="hazard-alerts">
+            <h2 class="alert-title">Hazard Alerts</h2>
+            <div id="alerts-container">
+                <div class="alert-item">
+                    <span class="alert-icon">⚠️</span>
+                    <span>No hazards detected. All clear!</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>How to Use This Navigation System</h2>
+            <ol>
+                <li>Set your start point and destination coordinates (coastal or open sea points only)</li>
+                <li>Select your ship type and hazard sensitivity level</li>
+                <li>Click "Calculate Sea Route" to generate a safe ocean-only path via backend</li>
+                <li>Use "Simulate Hazards" to test the hazard detection system</li>
+                <li>Click "Start Ship Simulation" to animate the ship moving along the route with dynamic hazard updates</li>
+                <li>The system will avoid all land (including Sri Lanka) and stick to open ocean routes</li>
+                <li>If hazards are detected, the system will recalculate a safe ocean route</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map with an ocean-focused view over Indian coasts
+        const map = L.map('map').setView([15.0, 80.0], 5);
+        
+        // Add OpenStreetMap tiles with a blue tint for water emphasis
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Define coastal areas (ocean-only, avoiding Sri Lanka land)
+        const coastlines = [
+            // West Coast of India
+            [[23.0, 68.0], [22.0, 69.0], [21.0, 72.0], [19.0, 72.8], [15.0, 74.0], [12.0, 75.0], [10.0, 76.0], [8.0, 77.0]],
+            // South Coast (staying far offshore from Sri Lanka)
+            [[8.0, 77.0], [6.5, 76.0], [6.0, 75.0]], // Farther west to avoid Sri Lanka
+            // East Coast of India
+            [[10.0, 79.8], [12.0, 80.0], [13.0, 80.2], [15.0, 80.0], [17.0, 82.0], [20.0, 85.0], [21.0, 87.0], [22.5, 88.3]]
+        ];
+        
+        coastlines.forEach(coast => {
+            L.polyline(coast, {
+                color: '#3388ff',
+                weight: 6,
+                opacity: 0.7
+            }).addTo(map).bindPopup('<b>Ocean Coastline</b>');
+        });
+        
+        // Add markers for start and end points (default: Mumbai to Kolkata)
+        let startMarker = L.marker([19.0760, 72.8777]).addTo(map)
+            .bindPopup('Start Point: Mumbai')
+            .openPopup();
+            
+        let endMarker = L.marker([22.5726, 88.3639]).addTo(map)
+            .bindPopup('Destination: Kolkata');
+        
+        // Route line
+        let routeLine = null;
+        
+        // Hazards
+        let hazards = [];
+        
+        // Ship marker for animation
+        let shipMarker = null;
+        let animationInterval = null;
+        
+        // Simulated environmental factors (for dynamic hazards)
+        function getEnvironmentalFactors(lat, lng) {
+            // Simulate temperature (20-35°C), pressure (990-1020 hPa), wind speed (0-50 km/h), wave height (0-5 m)
+            const temperature = 20 + Math.random() * 15;
+            const pressure = 990 + Math.random() * 30;
+            const windSpeed = Math.random() * 50;
+            const waveHeight = Math.random() * 5;
+            return { temperature, pressure, windSpeed, waveHeight };
+        }
+        
+        // Detect hazards based on factors
+        function detectHazards(factors) {
+            const detected = [];
+            if (factors.temperature > 30) detected.push('High Temperature');
+            if (factors.pressure < 1000) detected.push('Low Pressure');
+            if (factors.windSpeed > 30) detected.push('Strong Winds');
+            if (factors.waveHeight > 3) detected.push('High Waves');
+            return detected;
+        }
+        
+        // Update hazard alerts
+        function updateHazardAlerts(detectedHazards) {
+            const alertsContainer = document.getElementById('alerts-container');
+            alertsContainer.innerHTML = '';
+            if (detectedHazards.length === 0) {
+                alertsContainer.innerHTML = `
+                    <div class="alert-item">
+                        <span class="alert-icon">⚠️</span>
+                        <span>No hazards detected. All clear!</span>
+                    </div>
+                `;
+            } else {
+                detectedHazards.forEach(hazard => {
+                    const alertItem = document.createElement('div');
+                    alertItem.className = 'alert-item';
+                    alertItem.innerHTML = `
+                        <span class="alert-icon">⚠️</span>
+                        <span>${hazard} detected at current position.</span>
+                    `;
+                    alertsContainer.appendChild(alertItem);
+                });
+            }
+            document.getElementById('hazards-count').textContent = detectedHazards.length;
+        }
+        
+        // Calculate route function - fetches from backend for ocean-only routing
+        document.getElementById('calculate-route').addEventListener('click', async function() {
+            const startCoords = document.getElementById('start-point').value.split(',').map(Number);
+            const endCoords = document.getElementById('end-point').value.split(',').map(Number);
+            const boatType = document.getElementById('boat-type').value;
+            const hazardSensitivity = document.getElementById('hazard-sensitivity').value;
+            
+            // Fetch route from backend
+            const response = await fetch('http://localhost:5000/calculate_route', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    start: startCoords,
+                    end: endCoords,
+                    ship_type: boatType,
+                    hazard_sensitivity: hazardSensitivity
+                })
+            });
+            
+            const data = await response.json();
+            const routePoints = data.route_points;
+            
+            // Update markers
+            map.removeLayer(startMarker);
+            map.removeLayer(endMarker);
+            
+            startMarker = L.marker(startCoords).addTo(map).bindPopup('Start Point');
+            endMarker = L.marker(endCoords).addTo(map).bindPopup('Destination');
+            
+            // Remove existing route if any
+            if (routeLine) {
+                map.removeLayer(routeLine);
+            }
+            
+            // Draw the route
+            routeLine = L.polyline(routePoints, {
+                color: '#4ecdc4',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '5, 10'
+            }).addTo(map);
+            
+            // Fit map to show the entire route
+            map.fitBounds(routeLine.getBounds());
+            
+            // Update status
+            document.getElementById('route-status').textContent = 'Active (Ocean Route)';
+            document.getElementById('current-pos').textContent = startCoords.join(', ');
+            document.getElementById('destination-pos').textContent = endCoords.join(', ');
+            
+            // Calculate distance and ETA
+            const distance = calculateDistance(routePoints);
+            document.getElementById('distance').textContent = distance.toFixed(1) + ' km';
+            document.getElementById('eta').textContent = calculateETA(distance);
+            document.getElementById('speed').textContent = '10 knots';
+        });
+        
+        // Simulate hazards function (calls backend for recalculated route)
+        document.getElementById('simulate-hazards').addEventListener('click', async function() {
+            // Clear previous hazards
+            hazards.forEach(hazard => map.removeLayer(hazard));
+            hazards = [];
+            
+            // Create simulated hazards
+            const hazardTypes = ['Storm', 'Rough Seas', 'Floating Debris', 'Strong Current'];
+            const hazardIcons = ['⛈️', '🌊', '🪵', '🌪️'];
+            
+            for (let i = 0; i < 3; i++) {
+                const lat = 10.0 + Math.random() * 10;
+                const lng = 75.0 + Math.random() * 10;
+                
+                const hazardTypeIndex = Math.floor(Math.random() * hazardTypes.length);
+                
+                const hazardCircle = L.circle([lat, lng], {
+                    color: '#ff7e5f',
+                    fillColor: '#ff7e5f',
+                    fillOpacity: 0.3,
+                    radius: 50000 // Larger for sea
+                }).addTo(map);
+                
+                hazardCircle.bindPopup(`<b>${hazardTypes[hazardTypeIndex]}</b><br>Avoid this area`);
+                
+                hazards.push(hazardCircle);
+            }
+            
+            // Update alerts
+            document.getElementById('alerts-container').innerHTML = '';
+            
+            hazards.forEach((hazard, index) => {
+                const alertItem = document.createElement('div');
+                alertItem.className = 'alert-item';
+                alertItem.innerHTML = `
+                    <span class="alert-icon">${hazardIcons[index % hazardIcons.length]}</span>
+                    <span>${hazardTypes[index % hazardTypes.length]} detected nearby. Route adjusted.</span>
+                `;
+                document.getElementById('alerts-container').appendChild(alertItem);
+            });
+            
+            // Update status
+            document.getElementById('hazards-count').textContent = hazards.length;
+            document.getElementById('route-status').textContent = 'Hazard Avoidance Active';
+            
+            // If we have a route, recalculate via backend to avoid hazards
+            if (routeLine) {
+                const startCoords = document.getElementById('start-point').value.split(',').map(Number);
+                const endCoords = document.getElementById('end-point').value.split(',').map(Number);
+                const boatType = document.getElementById('boat-type').value;
+                const hazardSensitivity = document.getElementById('hazard-sensitivity').value;
+                
+                const response = await fetch('http://localhost:5000/calculate_route', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start: startCoords,
+                        end: endCoords,
+                        ship_type: boatType,
+                        hazard_sensitivity: hazardSensitivity,
+                        avoid_hazards: true
+                    })
+                });
+                
+                const data = await response.json();
+                const routePoints = data.route_points;
+                
+                map.removeLayer(routeLine);
+                
+                routeLine = L.polyline(routePoints, {
+                    color: '#4ecdc4',
+                    weight: 4,
+                    opacity: 0.7,
+                    dashArray: '5, 10'
+                }).addTo(map);
+            }
+        });
+        
+        // Start ship simulation (slower speed with dynamic hazard updates)
+        document.getElementById('start-simulation').addEventListener('click', function() {
+            if (!routeLine) {
+                alert('Calculate a route first!');
+                return;
+            }
+            
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            
+            const routePoints = routeLine.getLatLngs();
+            let index = 0;
+            
+            // Clear existing hazards and alerts
+            hazards.forEach(hazard => map.removeLayer(hazard));
+            hazards = [];
+            updateHazardAlerts([]);
+            
+            // Create ship marker if not exists
+            if (shipMarker) {
+                map.removeLayer(shipMarker);
+            }
+            shipMarker = L.marker(routePoints[0], {
+                icon: L.divIcon({
+                    className: 'ship-icon',
+                    html: '🚢',
+                    iconSize: [30, 30]
+                })
+            }).addTo(map);
+            
+            // Animate (slower: 1000ms interval)
+            animationInterval = setInterval(() => {
+                index++;
+                if (index >= routePoints.length) {
+                    clearInterval(animationInterval);
+                    document.getElementById('speed').textContent = '0 knots';
+                    document.getElementById('route-status').textContent = 'Arrived';
+                    updateHazardAlerts([]); // Clear hazards on arrival
+                    return;
+                }
+                
+                const currentPos = routePoints[index];
+                shipMarker.setLatLng(currentPos);
+                document.getElementById('current-pos').textContent = `${currentPos.lat.toFixed(4)}, ${currentPos.lng.toFixed(4)}`;
+                document.getElementById('speed').textContent = '10 knots';
+                
+                // Simulate environmental factors at current position
+                const factors = getEnvironmentalFactors(currentPos.lat, currentPos.lng);
+                
+                // Detect hazards based on factors
+                const detectedHazards = detectHazards(factors);
+                
+                // Update hazard alerts and count
+                updateHazardAlerts(detectedHazards);
+                
+                // Optionally, add visual hazard if detected
+                if (detectedHazards.length > 0) {
+                    const hazardCircle = L.circle([currentPos.lat, currentPos.lng], {
+                        color: '#ff7e5f',
+                        fillColor: '#ff7e5f',
+                        fillOpacity: 0.3,
+                        radius: 20000
+                    }).addTo(map);
+                    hazardCircle.bindPopup(`<b>Dynamic Hazard</b><br>${detectedHazards.join(', ')}`);
+                    hazards.push(hazardCircle);
+                }
+            }, 1000); // Slower animation: 1 second per step
+        });
+        
+        // Reset map function
+        document.getElementById('reset-map').addEventListener('click', function() {
+            // Clear hazards
+            hazards.forEach(hazard => map.removeLayer(hazard));
+            hazards = [];
+            
+            // Clear route
+            if (routeLine) {
+                map.removeLayer(routeLine);
+                routeLine = null;
+            }
+            
+            // Clear ship
+            if (shipMarker) {
+                map.removeLayer(shipMarker);
+                shipMarker = null;
+            }
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            
+            // Reset inputs
+            document.getElementById('start-point').value = '19.0760, 72.8777';
+            document.getElementById('end-point').value = '22.5726, 88.3639';
+            document.getElementById('boat-type').value = 'cargo';
+            document.getElementById('hazard-sensitivity').value = 'high';
+            
+            // Reset status
+            document.getElementById('current-pos').textContent = '19.0760, 72.8777';
+            document.getElementById('destination-pos').textContent = '22.5726, 88.3639';
+            document.getElementById('distance').textContent = '-';
+            document.getElementById('eta').textContent = '-';
+            document.getElementById('speed').textContent = '0 knots';
+            document.getElementById('hazards-count').textContent = '0';
+            document.getElementById('route-status').textContent = 'Not Calculated';
+            
+            // Reset alerts
+            document.getElementById('alerts-container').innerHTML = `
+                <div class="alert-item">
+                    <span class="alert-icon">⚠️</span>
+                    <span>No hazards detected. All clear!</span>
+                </div>
+            `;
+            
+            // Reset markers
+            map.removeLayer(startMarker);
+            map.removeLayer(endMarker);
+            
+            startMarker = L.marker([19.0760, 72.8777]).addTo(map)
+                .bindPopup('Start Point: Mumbai')
+                .openPopup();
+                
+            endMarker = L.marker([22.5726, 88.3639]).addTo(map)
+                .bindPopup('Destination: Kolkata');
+                
+            // Reset map view
+            map.setView([15.0, 80.0], 5);
+        });
+        
+        // Calculate distance of a route
+        function calculateDistance(points) {
+            let totalDistance = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                const lat1 = points[i][0];
+                const lon1 = points[i][1];
+                const lat2 = points[i+1][0];
+                const lon2 = points[i+1][1];
+                
+                const R = 6371; // Earth's radius in km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = 
+                    Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const distance = R * c;
+                
+                totalDistance += distance;
+            }
+            return totalDistance;
+        }
+        
+        // Calculate estimated time of arrival
+        function calculateETA(distance) {
+            const speed = 10; // knots (slower speed)
+            const hours = distance / (speed * 1.852); // Convert knots to km/h
+            const now = new Date();
+            const arrival = new Date(now.getTime() + hours * 60 * 60 * 1000);
+            
+            return arrival.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+    </script>
+</body>
+</html>
