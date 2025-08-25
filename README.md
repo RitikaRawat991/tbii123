@@ -41,5 +41,3 @@ Due to difficulties in uploading to GitHub, the following images represent the p
 
 
 
-## License
-[Add license information if applicable, e.g., MIT License]
